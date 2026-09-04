@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from langchain_community.chat_models import ChatTongyi
-from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
@@ -19,6 +18,7 @@ from .base import MemoryEntry, MemoryType
 from .long_term import EpisodicMemoryStore, SemanticMemoryStore
 from .short_term import ShortTermMemory
 from .utils import extract_memory_from_messages, format_memories_for_prompt, merge_user_profile
+from ..rag.core import build_embeddings
 
 try:
     import redis
@@ -60,6 +60,7 @@ class MemoryManager:
         milvus_collection: str = "mult_agent_memory",
         embedding_api_key: Optional[str] = None,
         embedding_model: str = "text-embedding-v1",
+        embedding_base_url: str = "",
         summary_model: str = "qwen-plus",
     ):
         self.default_tenant_id = tenant_id
@@ -87,7 +88,7 @@ class MemoryManager:
             self._init_redis(redis_url)
         self._init_postgres()
         if self.enable_milvus and self.enable_long_term:
-            self._init_milvus(milvus_host, milvus_port, milvus_collection, embedding_api_key, embedding_model)
+            self._init_milvus(milvus_host, milvus_port, milvus_collection, embedding_api_key, embedding_model, embedding_base_url)
         self._init_summary_llm(embedding_api_key, summary_model)
         logger.info(
             "记忆管理器初始化完成 | short_term=%s | long_term=%s | scope=%s | save_task=%s | redis=%s | postgres=%s | milvus=%s",
@@ -201,13 +202,15 @@ class MemoryManager:
         milvus_collection: str,
         embedding_api_key: Optional[str],
         embedding_model: str,
+        embedding_base_url: str,
     ) -> None:
         if not milvus_host or not embedding_api_key:
             return
         try:
-            embeddings = DashScopeEmbeddings(
+            embeddings = build_embeddings(
+                api_key=embedding_api_key,
                 model=embedding_model,
-                dashscope_api_key=embedding_api_key,
+                base_url=embedding_base_url,
             )
             self._milvus_store = MilvusVectorStore(
                 embedding_function=embeddings,
@@ -1490,3 +1493,5 @@ class MemoryManager:
             },
         }
         return stats
+
+

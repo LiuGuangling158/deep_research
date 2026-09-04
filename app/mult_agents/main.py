@@ -291,6 +291,8 @@ def build_memory_manager(config: AppConfig) -> Optional[MemoryManager]:
             milvus_port=config.milvus_port,
             milvus_collection=config.milvus_collection,
             embedding_api_key=config.embedding_api_key,
+            embedding_model=config.embedding_model,
+            embedding_base_url=config.embedding_base_url,
         )
     except Exception as exc:
         logger.exception("初始化 MemoryManager 失败，已禁用外部记忆: %s", exc)
@@ -452,6 +454,8 @@ def build_agents(model: str, api_key: str, config: AppConfig) -> AgentBundle:
         milvus_host=config.milvus_host,
         milvus_port=config.milvus_port,
         collection_name=config.milvus_collection,
+        embedding_model=config.embedding_model,
+        embedding_base_url=config.embedding_base_url,
     )
     if config.enable_milvus and config.embedding_api_key:
         init_rag_system(api_key=config.embedding_api_key, config=rag_config)
@@ -564,3 +568,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

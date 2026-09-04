@@ -49,7 +49,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--collection", default="", help="Milvus collection name")
     parser.add_argument("--milvus-host", default="", help="Milvus host")
     parser.add_argument("--milvus-port", type=int, default=0, help="Milvus port")
-    parser.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL)
+    parser.add_argument("--embedding-model", default="")
     parser.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE)
     parser.add_argument("--chunk-overlap", type=int, default=DEFAULT_CHUNK_OVERLAP)
     return parser.parse_args()
@@ -67,7 +67,8 @@ def main() -> None:
         milvus_host=milvus_host,
         milvus_port=milvus_port,
         collection_name=collection_name,
-        embedding_model=args.embedding_model,
+        embedding_model=args.embedding_model or config.embedding_model,
+        embedding_base_url=config.embedding_base_url,
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
     )
@@ -89,3 +90,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

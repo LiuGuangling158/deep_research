@@ -29,8 +29,16 @@ Milvus local knowledge ingestion still uses DashScope embeddings by default. If 
 ```env
 DASHSCOPE_API_KEY=your_dashscope_key
 EMBEDDING_API_KEY=your_dashscope_key
+EMBEDDING_MODEL=text-embedding-v1
+EMBEDDING_BASE_URL=
 ```
 
+
+If you use a Workspace-compatible DashScope endpoint, set `EMBEDDING_BASE_URL` to the base path, without `/chat/completions`:
+
+```env
+EMBEDDING_BASE_URL=https://llm-6vdfmymmn58fkqee.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+```
 Optional web search:
 
 ```env
@@ -128,3 +136,18 @@ The frontend Dockerfile uses `front/agent_front/.npmrc` to disable npm audit/fun
 ```text
 registry=https://registry.npmjs.org/
 ```
+
+If `deepresearch-backend` keeps restarting, first verify that Codespaces is on the latest source and that the rebuilt image no longer contains old `OpenAIEmbeddings` startup code:
+
+```bash
+git fetch origin
+git pull --ff-only origin main
+git rev-parse --short HEAD
+grep -n "OpenAIEmbeddings\|DashScopeEmbeddings" app/mult_agents/rag/core.py
+
+docker compose -f docker-compose.codespaces.yml down
+docker compose -f docker-compose.codespaces.yml build --no-cache --pull deepresearch-backend
+docker compose -f docker-compose.codespaces.yml up -d
+```
+
+If you need to bring the demo UI up before RAG is configured, temporarily set `ENABLE_MILVUS=false` in `.env.codespaces`, recreate the backend, then turn it back on after embedding is verified.

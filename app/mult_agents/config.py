@@ -18,6 +18,8 @@ if _ENV_PATH.exists():
 class AppConfig:
     api_key: str
     embedding_api_key: str
+    embedding_base_url: str
+    embedding_model: str
     model: str
     thread_id: str
     user_id: str
@@ -98,6 +100,14 @@ class AppConfig:
         return "" if AppConfig._is_deepseek_model(model) else chat_api_key
 
     @staticmethod
+    def _resolve_embedding_base_url(data: dict) -> str:
+        return AppConfig._resolve_first(
+            data,
+            ("embedding_base_url", "dashscope_base_url"),
+            ("EMBEDDING_BASE_URL", "DASHSCOPE_BASE_URL"),
+        )
+
+    @staticmethod
     def from_file(path: str | Path | None = None) -> "AppConfig":
         config_path = Path(path) if path else AppConfig._default_config_path()
         if not config_path.exists():
@@ -113,6 +123,8 @@ class AppConfig:
                 f"缺少 {env_key} 配置，请在 {config_path} 中填写对应 api_key，或设置环境变量 {env_key}"
             )
         embedding_api_key = AppConfig._resolve_embedding_api_key(data, api_key, model)
+        embedding_base_url = AppConfig._resolve_embedding_base_url(data)
+        embedding_model = AppConfig._resolve_str(data, "embedding_model", "EMBEDDING_MODEL", "text-embedding-v1")
         thread_id = AppConfig._resolve_str(data, "thread_id", "THREAD_ID", "default")
         user_id = AppConfig._resolve_str(data, "user_id", "USER_ID", "default_user")
         tenant_id = AppConfig._resolve_str(data, "tenant_id", "TENANT_ID", "default_tenant")
@@ -140,6 +152,8 @@ class AppConfig:
         return AppConfig(
             api_key=api_key,
             embedding_api_key=embedding_api_key,
+            embedding_base_url=embedding_base_url,
+            embedding_model=embedding_model,
             model=model,
             thread_id=thread_id,
             user_id=user_id,
@@ -172,6 +186,8 @@ class AppConfig:
             env_key = "DEEPSEEK_API_KEY" if AppConfig._is_deepseek_model(model) else "DASHSCOPE_API_KEY"
             raise ValueError(f"缺少 {env_key} 环境变量")
         embedding_api_key = AppConfig._resolve_embedding_api_key(data, api_key, model)
+        embedding_base_url = AppConfig._resolve_embedding_base_url(data)
+        embedding_model = AppConfig._resolve_str(data, "embedding_model", "EMBEDDING_MODEL", "text-embedding-v1")
         thread_id = AppConfig._resolve_str(data, "thread_id", "THREAD_ID", "default")
         user_id = AppConfig._resolve_str(data, "user_id", "USER_ID", "default_user")
         tenant_id = AppConfig._resolve_str(data, "tenant_id", "TENANT_ID", "default_tenant")
@@ -199,6 +215,8 @@ class AppConfig:
         return AppConfig(
             api_key=api_key,
             embedding_api_key=embedding_api_key,
+            embedding_base_url=embedding_base_url,
+            embedding_model=embedding_model,
             model=model,
             thread_id=thread_id,
             user_id=user_id,
@@ -221,3 +239,5 @@ class AppConfig:
             milvus_port=milvus_port,
             milvus_collection=milvus_collection,
         )
+
+

@@ -20,12 +20,35 @@ except ImportError:
     _MILVUS_BACKEND = "langchain_community"
 
 
+def build_embeddings(api_key: str, model: str, base_url: str = ""):
+    """Build embeddings for DashScope or an OpenAI-compatible endpoint."""
+    cleaned_api_key = (api_key or "").strip()
+    cleaned_base_url = (base_url or "").strip()
+    if not cleaned_api_key:
+        raise ValueError("缺少 EMBEDDING_API_KEY 或 DASHSCOPE_API_KEY，无法初始化向量模型")
+    if cleaned_base_url:
+        try:
+            from langchain_openai import OpenAIEmbeddings
+        except ImportError as exc:
+            raise RuntimeError("缺少 langchain-openai 依赖，请安装: pip install langchain-openai") from exc
+        return OpenAIEmbeddings(
+            model=model,
+            api_key=cleaned_api_key,
+            base_url=cleaned_base_url,
+        )
+    return DashScopeEmbeddings(
+        model=model,
+        dashscope_api_key=cleaned_api_key,
+    )
+
+
 @dataclass(frozen=True)
 class RAGConfig:
     milvus_host: str = "127.0.0.1"
     milvus_port: int = 19530
     collection_name: str = "mult_agent_knowledge"
     embedding_model: str = "text-embedding-v1"
+    embedding_base_url: str = ""
     chunk_size: int = 500
     chunk_overlap: int = 50
 
@@ -34,9 +57,10 @@ class RAGSystem:
     def __init__(self, api_key: str, config: Optional[RAGConfig] = None):
         self.config = config or RAGConfig()
         self.api_key = api_key
-        self.embeddings = DashScopeEmbeddings(
+        self.embeddings = build_embeddings(
+            api_key=self.api_key,
             model=self.config.embedding_model,
-            dashscope_api_key=self.api_key,
+            base_url=self.config.embedding_base_url,
         )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.config.chunk_size,
@@ -51,7 +75,14 @@ class RAGSystem:
             connection_args={"uri": f"http://{self.config.milvus_host}:{self.config.milvus_port}"},
             auto_id=True,
         )
-        logger.info("RAG backend=%s | collection=%s", _MILVUS_BACKEND, self.config.collection_name)
+        embedding_backend = "openai_compatible" if self.config.embedding_base_url else "dashscope"
+        logger.info(
+            "RAG backend=%s | collection=%s | embeddings=%s | base_url_configured=%s",
+            _MILVUS_BACKEND,
+            self.config.collection_name,
+            embedding_backend,
+            bool(self.config.embedding_base_url),
+        )
 
     def _connect_to_milvus(self) -> None:
         try:
