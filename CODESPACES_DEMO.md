@@ -115,3 +115,16 @@ docker compose -f docker-compose.codespaces.yml ps
 If ingestion fails with `EMBEDDING_API_KEY` or `DASHSCOPE_API_KEY`, check `.env.codespaces`.
 
 If the demo URL asks viewers to sign in, make sure port `8080` is set to `Public` in the Codespaces Ports panel.
+
+If the frontend build appears stuck at `RUN npm ci`, rebuild only the frontend with plain progress logs:
+
+```bash
+docker compose --progress=plain -f docker-compose.codespaces.yml build --no-cache deepresearch-front
+docker compose -f docker-compose.codespaces.yml up -d deepresearch-front
+```
+
+The frontend Dockerfile uses `front/agent_front/.npmrc` to disable npm audit/fund prompts and use the npmmirror registry. If that mirror is slow in your Codespaces region, change the first line of `.npmrc` to:
+
+```text
+registry=https://registry.npmjs.org/
+```

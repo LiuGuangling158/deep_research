@@ -38,9 +38,10 @@ langchain==1.0.7
 langchain-classic==1.0.0
 langchain-community==0.4.1
 langchain-core==1.0.5
-langchain-deepseek==1.1.0
+langchain-deepseek==1.0.1
 langchain-mcp-adapters==0.1.14
 langchain-milvus==0.3.3
+langchain-openai==1.0.1
 langchain-text-splitters==1.0.0
 langgraph==1.0.3
 langgraph-checkpoint==3.0.1
