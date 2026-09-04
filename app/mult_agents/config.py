@@ -17,6 +17,7 @@ if _ENV_PATH.exists():
 @dataclass(frozen=True)
 class AppConfig:
     api_key: str
+    embedding_api_key: str
     model: str
     thread_id: str
     user_id: str
@@ -68,6 +69,35 @@ class AppConfig:
         return value.lower() == "true"
 
     @staticmethod
+    def _is_deepseek_model(model: str) -> bool:
+        return model.lower().startswith("deepseek-")
+
+    @staticmethod
+    def _resolve_first(data: dict, fields: tuple[str, ...], env_keys: tuple[str, ...], default: str = "") -> str:
+        for env_key in env_keys:
+            env_value = os.getenv(env_key)
+            if env_value is not None and str(env_value).strip() != "":
+                return str(env_value).strip()
+        for field in fields:
+            file_value = data.get(field)
+            if file_value is not None and str(file_value).strip() != "":
+                return str(file_value).strip()
+        return default
+
+    @staticmethod
+    def _resolve_chat_api_key(data: dict, model: str) -> str:
+        if AppConfig._is_deepseek_model(model):
+            return AppConfig._resolve_first(data, ("deepseek_api_key", "api_key"), ("DEEPSEEK_API_KEY",))
+        return AppConfig._resolve_first(data, ("dashscope_api_key", "api_key"), ("DASHSCOPE_API_KEY",))
+
+    @staticmethod
+    def _resolve_embedding_api_key(data: dict, chat_api_key: str, model: str) -> str:
+        value = AppConfig._resolve_first(data, ("embedding_api_key", "dashscope_api_key"), ("EMBEDDING_API_KEY", "DASHSCOPE_API_KEY"))
+        if value:
+            return value
+        return "" if AppConfig._is_deepseek_model(model) else chat_api_key
+
+    @staticmethod
     def from_file(path: str | Path | None = None) -> "AppConfig":
         config_path = Path(path) if path else AppConfig._default_config_path()
         if not config_path.exists():
@@ -75,12 +105,14 @@ class AppConfig:
         data = json.loads(config_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             raise ValueError("配置文件格式错误")
-        api_key = AppConfig._resolve_str(data, "api_key", "DASHSCOPE_API_KEY", "")
+        model = AppConfig._resolve_str(data, "model", "MODEL", "deepseek-v4-flash")
+        api_key = AppConfig._resolve_chat_api_key(data, model)
         if not api_key:
+            env_key = "DEEPSEEK_API_KEY" if AppConfig._is_deepseek_model(model) else "DASHSCOPE_API_KEY"
             raise ValueError(
-                f"缺少 DASHSCOPE_API_KEY 配置，请在 {config_path} 中填写 api_key，或设置环境变量 DASHSCOPE_API_KEY"
+                f"缺少 {env_key} 配置，请在 {config_path} 中填写对应 api_key，或设置环境变量 {env_key}"
             )
-        model = AppConfig._resolve_str(data, "model", "MODEL", "qwen-plus")
+        embedding_api_key = AppConfig._resolve_embedding_api_key(data, api_key, model)
         thread_id = AppConfig._resolve_str(data, "thread_id", "THREAD_ID", "default")
         user_id = AppConfig._resolve_str(data, "user_id", "USER_ID", "default_user")
         tenant_id = AppConfig._resolve_str(data, "tenant_id", "TENANT_ID", "default_tenant")
@@ -107,6 +139,7 @@ class AppConfig:
         milvus_collection = AppConfig._resolve_str(data, "milvus_collection", "MILVUS_COLLECTION", "mult_agent_memory")
         return AppConfig(
             api_key=api_key,
+            embedding_api_key=embedding_api_key,
             model=model,
             thread_id=thread_id,
             user_id=user_id,
@@ -133,10 +166,12 @@ class AppConfig:
     @staticmethod
     def from_env() -> "AppConfig":
         data: dict = {}
-        api_key = AppConfig._resolve_str(data, "api_key", "DASHSCOPE_API_KEY", "")
+        model = AppConfig._resolve_str(data, "model", "MODEL", "deepseek-v4-flash")
+        api_key = AppConfig._resolve_chat_api_key(data, model)
         if not api_key:
-            raise ValueError("缺少 DASHSCOPE_API_KEY 环境变量")
-        model = AppConfig._resolve_str(data, "model", "MODEL", "qwen-plus")
+            env_key = "DEEPSEEK_API_KEY" if AppConfig._is_deepseek_model(model) else "DASHSCOPE_API_KEY"
+            raise ValueError(f"缺少 {env_key} 环境变量")
+        embedding_api_key = AppConfig._resolve_embedding_api_key(data, api_key, model)
         thread_id = AppConfig._resolve_str(data, "thread_id", "THREAD_ID", "default")
         user_id = AppConfig._resolve_str(data, "user_id", "USER_ID", "default_user")
         tenant_id = AppConfig._resolve_str(data, "tenant_id", "TENANT_ID", "default_tenant")
@@ -163,6 +198,7 @@ class AppConfig:
         milvus_collection = AppConfig._resolve_str(data, "milvus_collection", "MILVUS_COLLECTION", "mult_agent_memory")
         return AppConfig(
             api_key=api_key,
+            embedding_api_key=embedding_api_key,
             model=model,
             thread_id=thread_id,
             user_id=user_id,

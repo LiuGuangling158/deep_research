@@ -1,6 +1,8 @@
 {
   "api_key": "",
-  "model": "qwen-turbo",
+  "deepseek_api_key": "",
+  "embedding_api_key": "",
+  "model": "deepseek-v4-flash",
   "tenant_id": "default_tenant",
   "user_id": "default_user",
   "thread_id": "default",

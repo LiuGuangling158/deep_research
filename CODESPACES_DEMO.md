@@ -21,7 +21,14 @@ cp .env.codespaces.example .env.codespaces
 Edit `.env.codespaces` and fill at least:
 
 ```env
+DEEPSEEK_API_KEY=your_deepseek_key
+```
+
+Milvus local knowledge ingestion still uses DashScope embeddings by default. If you need local RAG in the demo, also fill one of these:
+
+```env
 DASHSCOPE_API_KEY=your_dashscope_key
+EMBEDDING_API_KEY=your_dashscope_key
 ```
 
 Optional web search:
@@ -105,6 +112,6 @@ If Milvus is still starting, wait one or two minutes and run:
 docker compose -f docker-compose.codespaces.yml ps
 ```
 
-If ingestion fails with `DASHSCOPE_API_KEY`, check `.env.codespaces`.
+If ingestion fails with `EMBEDDING_API_KEY` or `DASHSCOPE_API_KEY`, check `.env.codespaces`.
 
 If the demo URL asks viewers to sign in, make sure port `8080` is set to `Public` in the Codespaces Ports panel.

@@ -290,7 +290,7 @@ def build_memory_manager(config: AppConfig) -> Optional[MemoryManager]:
             milvus_host=config.milvus_host,
             milvus_port=config.milvus_port,
             milvus_collection=config.milvus_collection,
-            embedding_api_key=config.api_key,
+            embedding_api_key=config.embedding_api_key,
         )
     except Exception as exc:
         logger.exception("初始化 MemoryManager 失败，已禁用外部记忆: %s", exc)
@@ -425,10 +425,24 @@ class AgentBundle:
     writer: any
 
 
+def _is_deepseek_model(model: str) -> bool:
+    return model.lower().startswith("deepseek-")
+
+
 def build_agent(model: str, api_key: str, prompt_key: str, temperature: float, tools: list):
     if api_key:
-        os.environ["DASHSCOPE_API_KEY"] = api_key
-    llm = ChatTongyi(model=model, temperature=temperature)
+        if _is_deepseek_model(model):
+            os.environ["DEEPSEEK_API_KEY"] = api_key
+        else:
+            os.environ["DASHSCOPE_API_KEY"] = api_key
+    if _is_deepseek_model(model):
+        try:
+            from langchain_deepseek import ChatDeepSeek
+        except ImportError as exc:
+            raise RuntimeError("缺少 DeepSeek LangChain 依赖，请安装: pip install langchain-deepseek") from exc
+        llm = ChatDeepSeek(model=model, temperature=temperature, api_key=api_key or None)
+    else:
+        llm = ChatTongyi(model=model, temperature=temperature)
     prompt = PROMPTS[prompt_key]
     return create_agent(model=llm, tools=tools, system_prompt=prompt)
 
@@ -439,7 +453,10 @@ def build_agents(model: str, api_key: str, config: AppConfig) -> AgentBundle:
         milvus_port=config.milvus_port,
         collection_name=config.milvus_collection,
     )
-    init_rag_system(api_key=api_key, config=rag_config)
+    if config.enable_milvus and config.embedding_api_key:
+        init_rag_system(api_key=config.embedding_api_key, config=rag_config)
+    elif config.enable_milvus:
+        logger.warning("%s 未配置 EMBEDDING_API_KEY 或 DASHSCOPE_API_KEY，本地向量检索将不可用", colorize("[rag]", "yellow"))
     # 去掉每个 Agent 强制绑定的 tools，只做信息抽取，降低 System Prompt 长度
     return AgentBundle(
         intent_router=build_agent(model, api_key, "intent_router", 0.0, []),

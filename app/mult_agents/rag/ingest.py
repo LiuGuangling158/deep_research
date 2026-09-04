@@ -71,7 +71,9 @@ def main() -> None:
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
     )
-    rag = RAGSystem(api_key=config.api_key, config=rag_cfg)
+    if not config.embedding_api_key:
+        raise ValueError("缺少 EMBEDDING_API_KEY 或 DASHSCOPE_API_KEY，无法生成向量并写入 Milvus")
+    rag = RAGSystem(api_key=config.embedding_api_key, config=rag_cfg)
 
     input_path = Path(args.input).expanduser().resolve()
     if not input_path.exists():
