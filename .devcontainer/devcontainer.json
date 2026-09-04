@@ -1,0 +1,21 @@
+{
+  "name": "DeepResearch Codespaces Demo",
+  "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "forwardPorts": [8080, 8000],
+  "portsAttributes": {
+    "8080": {
+      "label": "DeepResearch demo",
+      "onAutoForward": "openPreview"
+    },
+    "8000": {
+      "label": "DeepResearch backend",
+      "onAutoForward": "silent"
+    }
+  },
+  "postAttachCommand": "echo 'Run: cp .env.codespaces.example .env.codespaces && docker compose -f docker-compose.codespaces.yml up -d --build'"
+}
